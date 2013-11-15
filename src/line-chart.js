@@ -57,7 +57,7 @@ dc.lineChart = function (parent, chartGroup) {
 
         if (layersList.empty()) layersList = chartBody.append("g").attr("class", "stack-list");
 
-        var layers = layersList.selectAll("g.stack").data(_chart.stackLayers());
+        var layers = layersList.selectAll("g.stack").data(_chart.data());
 
         var layersEnter = layers
             .enter()
@@ -71,8 +71,6 @@ dc.lineChart = function (parent, chartGroup) {
         drawArea(layersEnter, layers);
 
         drawDots(chartBody, layers);
-
-        _chart.stackLayers(null);
     };
 
     _chart.interpolate = function(_){
@@ -134,14 +132,15 @@ dc.lineChart = function (parent, chartGroup) {
 
         var path = layersEnter.append("path")
             .attr("class", "line")
-            .attr("stroke", _chart.getColor)
-            .attr("fill", _chart.getColor);
+            .attr("stroke", dc.pluck('values',_chart.getColor))
+            .attr("fill", dc.pluck('values',_chart.getColor));
         if (_dashStyle)
             path.attr("stroke-dasharray", _dashStyle);
 
         dc.transition(layers.select("path.line"), _chart.transitionDuration())
+            //.ease("linear")
             .attr("d", function (d) {
-                return safeD(line(d.points));
+                return safeD(line(d.values));
             });
     }
 
@@ -165,14 +164,15 @@ dc.lineChart = function (parent, chartGroup) {
 
             layersEnter.append("path")
                 .attr("class", "area")
-                .attr("fill", _chart.getColor)
+                .attr("fill", dc.pluck('values',_chart.getColor))
                 .attr("d", function (d) {
-                    return safeD(area(d.points));
+                    return safeD(area(d.values));
                 });
 
             dc.transition(layers.select("path.area"), _chart.transitionDuration())
+                //.ease("linear")
                 .attr("d", function (d) {
-                    return safeD(area(d.points));
+                    return safeD(area(d.values));
                 });
         }
     }
@@ -191,7 +191,7 @@ dc.lineChart = function (parent, chartGroup) {
 
             layers.each(function (d, layerIndex) {
                 var layer = d3.select(this);
-                var points = layer.datum().points;
+                var points = layer.datum().values;
                 if (_defined) points = points.filter(_defined);
 
                 var g = tooltips.select("g." + TOOLTIP_G_CLASS + "._" + layerIndex);
@@ -199,13 +199,14 @@ dc.lineChart = function (parent, chartGroup) {
 
                 createRefLines(g);
 
-                var dots = g.selectAll("circle." + DOT_CIRCLE_CLASS).data(points);
+                var dots = g.selectAll("circle." + DOT_CIRCLE_CLASS)
+                    .data(points,dc.pluck('x'));
 
                 dots.enter()
                     .append("circle")
                     .attr("class", DOT_CIRCLE_CLASS)
                     .attr("r", getDotRadius())
-                    .attr("fill", _chart.getColor)
+                    .attr("fill", dc.pluck('values',_chart.getColor))
                     .style("fill-opacity", _dataPointFillOpacity)
                     .style("stroke-opacity", _dataPointStrokeOpacity)
                     .on("mousemove", function (d) {
@@ -218,7 +219,7 @@ dc.lineChart = function (parent, chartGroup) {
                         hideDot(dot);
                         hideRefLines(g);
                     })
-                    .append("title").text(dc.pluck('data', _chart.getTitleOfVisibleByIndex(layerIndex)));
+                    .append("title").text(dc.pluck('data', _chart.getTitleByIndex(layerIndex)));
 
                 dots.attr("cx", function (d) {
                         return dc.utils.safeNumber(_chart.x()(d.x));
@@ -226,7 +227,7 @@ dc.lineChart = function (parent, chartGroup) {
                     .attr("cy", function (d) {
                         return dc.utils.safeNumber(_chart.y()(d.y + d.y0));
                     })
-                    .select("title").text(dc.pluck('data', _chart.getTitleOfVisibleByIndex(layerIndex)));
+                    .select("title").text(dc.pluck('data', _chart.getTitleByIndex(layerIndex)));
 
                 dots.exit().remove();
             });
@@ -337,6 +338,15 @@ dc.lineChart = function (parent, chartGroup) {
             return d3.select(this).attr('fill') != d.color;
         }).classed('fadeout', false);
     };
+
+    dc.override(_chart,'legendables', function() {
+        var legendables = _chart._legendables();
+        if (!_dashStyle) return legendables;
+        return legendables.map(function(l) {
+            l.dashstyle = _dashStyle;
+            return l;
+        });
+    });
 
     return _chart.anchor(parent, chartGroup);
 };

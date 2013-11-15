@@ -23,6 +23,8 @@ function buildChart(id, xdomain) {
         .transitionDuration(0)
         .xUnits(d3.time.days)
         .legend(dc.legend().x(200).y(10).itemHeight(13).gap(5))
+        .shareColors(true)
+        .colors(d3.scale.category10())
         .compose([
             dc.barChart(chart)
                 .centerBar(true)
@@ -39,23 +41,19 @@ function buildChart(id, xdomain) {
     return chart;
 }
 
-function buildSharedChart(id, xdomain) {
-    if(xdomain === undefined)
-        xdomain = [new Date(2012, 4, 25), new Date(2012, 7, 10)];
-
+function buildSharedChart(id) {
     var dimension = statusGroup;
     var group = statusMultiGroup;
     var numberFormat = d3.format("d");
-
     d3.select("body").append("div").attr("id", id);
     var chart = dc.compositeChart("#" + id);
     chart
         .dimension(dimension)
         .width(500)
         .height(180)
-        .x(d3.time.scale().domain(xdomain))
+        .x(d3.scale.ordinal())
+        .xUnits(dc.units.ordinal)
         .transitionDuration(0)
-        .xUnits(d3.time.days)
 
         .legend(dc.legend().x(400).y(10).itemHeight(13).gap(5))
         .brushOn(false)
@@ -84,7 +82,7 @@ function buildSharedChart(id, xdomain) {
                 })
         ]);
 
-    chart.render();
+    dc.renderAll();
     return chart;
 }
 
@@ -395,8 +393,8 @@ suite.addBatch({
             return chart;
         },
         'tooltip should be correct': function(chart) {
-            assert.equal(chart.select(".sub._0 .dc-tooltip._0 .dot title").text(), "Count: 5");
-            assert.equal(chart.select(".sub._1 .dc-tooltip._0 .dot title").text(), "Value: 220");
+            assert.equal(chart.select(".sub._0 title").text(), "Count: 5");
+            assert.equal(chart.select(".sub._1 title").text(), "Value: 220");
         },
         teardown: function(topic) {
             resetAllFilters();
@@ -426,6 +424,14 @@ suite.addBatch({
             assert.equal("Date Value Group", d3.select(legendText[0][2]).text());
             assert.equal("Date Value Group", d3.select(legendText[0][3]).text());
             assert.equal("Date Group",       d3.select(legendText[0][4]).text());
+        },
+        'should generate unique colors with sharedColors': function (chart) {
+            var legendIcon = chart.selectAll("g.dc-legend g.dc-legend-item rect");
+            assert.equal(d3.select(legendIcon[0][0]).attr("fill"), "#1f77b4");
+            assert.equal(d3.select(legendIcon[0][1]).attr("fill"), "#ff7f0e");
+            assert.equal(d3.select(legendIcon[0][2]).attr("fill"), "#2ca02c");
+            assert.equal(d3.select(legendIcon[0][3]).attr("fill"), "#2ca02c");
+            assert.equal(d3.select(legendIcon[0][4]).attr("fill"), "#d62728");
         },
         'should properly delegate highlighting to its children': function (chart) {
             var firstItem = chart.select('g.dc-legend g.dc-legend-item');

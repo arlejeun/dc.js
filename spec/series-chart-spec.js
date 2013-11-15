@@ -24,7 +24,7 @@ describe('dc.seriesChart', function() {
             .x(d3.scale.linear().domain([1,2]))
             .dimension(dimensionColorData)
             .group(groupColorData)
-            .colors(["#000001", "#000002"])
+            .ordinalColors(["#000001", "#000002"])
             .seriesAccessor(function(d) { return +d.key[0];})
             .keyAccessor(function(d) { return +d.key[1];})
             .valueAccessor(function(d) { return +d.value ;})
